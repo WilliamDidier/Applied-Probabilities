@@ -1,0 +1,180 @@
+---
+title: "Lab Report 2"
+author: "Theo Lambert and William Didier"
+date: "2 octobre 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Cleaning
+
+##### Question 1
+
+
+```{r}
+f <- read.table("~/Stats/TP2/group1_forestfires.csv", sep=",", dec = ".", header = TRUE)
+for (i in 2:20)
+  name <- paste("~/Stats/TP2/group",i,"_forestfires.csv", sep = "")
+  f <- rbind(f, read.table(name, sep=",", dec = ".", header = TRUE))
+```
+
+##### Question 2
+
+```{r, echo=FALSE}
+print(f[1:4,])
+print("...")
+print(f[596:600,])
+```
+We start by saving this dataset to a file so that we can compare it to the cleaned version we will produce during this Lab Session.
+```{r}
+save(f,file="~/Stats/TP2/Lab2_uncleaned_dataset.Rda")
+```
+
+
+We can see that some months aren't filled properly. We could imagine an iterative method that would check if any argument is not as expected, or even repair the mistakes (for example replace April by apr)
+We could'nt find en elegant way of replacing the set of bad values, so we decided to apply, for each variable, a simple method without looping.
+We start by a quick check on how many different values are in the day and month columns :
+```{r}
+summary(f[,"day"])
+summary(f[,"month"])
+```
+
+
+```{r}
+f[,"day"][f[,"day"]=="Monday"] <- "mon"
+f[,"day"][f[,"day"]=="Tuesday"] <- "tue"
+f[,"day"][f[,"day"]=="Wednesday"] <- "wed"
+f[,"day"][f[,"day"]=="Thursday"] <- "thu"
+f[,"day"][f[,"day"]=="Friday"] <- "fri"
+f[,"day"][f[,"day"]=="Saturday"] <- "sat"
+f[,"day"][f[,"day"]=="Sunday"] <- "sun"
+```
+
+We use the same method for the months of the year
+
+```{r}
+f[,"month"][f[,"month"]=="January"] <- "jan"
+f[,"month"][f[,"month"]=="February"] <- "feb"
+f[,"month"][f[,"month"]=="March"] <- "mar"
+f[,"month"][f[,"month"]=="April"] <- "apr"
+f[,"month"][f[,"month"]=="May"] <- "may"
+f[,"month"][f[,"month"]=="June"] <- "jun"
+f[,"month"][f[,"month"]=="July"] <- "jul"
+f[,"month"][f[,"month"]=="August"] <- "aug"
+f[,"month"][f[,"month"]=="September"] <- "sep"
+f[,"month"][f[,"month"]=="October"] <- "oct"
+f[,"month"][f[,"month"]=="November"] <- "nov"
+f[,"month"][f[,"month"]=="December"] <- "dec"
+```
+
+
+We now check that there are only 7 different values in the day column, and 12 in the month column :
+```{r}
+summary(f[,"day"])
+summary(f[,"month"])
+```
+
+##### Question 3
+
+```{r}
+summary(f)
+```
+
+We can see that some data has some NA values : we need to remove those lines because the data is not exploitable. We decide to use the na.omit function to suppress the unexploitable data.
+```{r}
+f <- na.omit(f)
+```
+
+lets check that everything is now in order :
+```{r}
+summary(f)
+```
+
+
+##### Question 4
+
+We use the pairs function to build scatterplot matrixes.
+```{r}
+pairs(f[,1:9])
+```
+
+The scatterplot clearly outlines some extreme values such as heavy rain while a significant area burned (observation n°592). Although this might be surprising, we cannot discredit this data as it is likely to simply be an extreme observation rather than a mistake.
+We also noticed two extreme observations regarding the area burned in a single fire. When investigating, we realised that two observations (n°240 and n°544) were exactly the same. this time, we can suppose that there has been a mistake in the entry of the data. We will investigate a method to suppress doubled data. 
+
+##### Question 5
+
+After a deeper analysis of the previous scatterplot matrixes, we found some extreme temperature values. After investigation, we saw that 6 values (n° 586,430,125,117,276,301) were clearly above normal temperatures in Celsius. We decided to delete these observations from our dataset.
+```{r}
+f <- f[!f[,"temp"]>50,]
+```
+
+Also, we found some humidity values that aren't right. It is said that humidity is supposed to be a numerical value between 15 and 100.
+
+```{r}
+f <- f[!f[,"RH"]<15,]
+f <- f[!f[,"RH"]>100,]
+```
+
+
+We also found some extreme wind values (n°377 and 64). Even though the values are more than 10 times bigger than any other one, it's hard to conclude it's an error without having more info about the terrain. Indeed, having 130 km/h of wind is possible in many parts of the globe. 
+We used the unique() function to suppress all the doubled data in our set. We decides to keep the extreme values that we found with the scatterplot matrix, as we could'nt be sure wether they were extreme observations or mistakes.
+
+```{r}
+f <- unique(f)
+save(f,file="~/Stats/TP2/Lab2_cleaned_dataset.Rda")
+```
+
+Our cleaned dataset is in the Rda file attached to the same email as the on this file was attached to.
+
+
+##### Question 6
+
+```{r}
+summary(f[,"X"])
+summary(f[,"Y"])
+table(f[,"X"],f[,"Y"])
+```
+
+We can see that individually, X and Y seem to be quite evenly distributed in the analysed area. But once we analyse the couple (X,Y) we can see that its not the case anymore : the fires seem to declare only in the diagonal and not evenly in the area. We could already guess that by looking at the scatterplot matrix we built earlier. We will now analyse the couples of variables through the correlation between them. 
+
+```{r}
+cor(f[,"X"],f[,"Y"])
+cor(f[,"X"],f[,"temp"])
+cor(f[,"X"],f[,"RH"])
+cor(f[,"X"],f[,"wind"])
+cor(f[,"X"],f[,"rain"])
+cor(f[,"X"],f[,"area"])
+```
+Besides the correlation between X and Y that we had identified earlier, there's no variable that seems to be correlated to X.
+
+Rather than testing one by one each couple, we will have another look at the scatterplot matrix now that we've cleaned the dataset. Once we identify a couple of variables that look like they have a relation, we quantify it with the correlation function.
+```{r}
+pairs(f[,1:9])
+```
+
+We can identify a correlation between Rh and temp, which seems quite logical. Lets check this with the correlation function
+```{r}
+cor(f[,"temp"],f[,"RH"])
+```
+Indeed, the correlation coefficient is quite high in absolute value.
+
+On the other hand, it seems that there is no correlation whatsoever between RH and wind. Lets check it too.
+```{r}
+cor(f[,"wind"],f[,"RH"])
+```
+As we thought, there is no correlation between these 2 variables.
+
+
+The data we analyse is about forest fires. We think that the most important data to check its correlation with is the area of forest that burned. We will end this Lab Session by checking the value of the correlation between area and all the other variables.
+```{r}
+cor(f[,"area"],f[,"X"])
+cor(f[,"area"],f[,"Y"])
+cor(f[,"area"],f[,"temp"])
+cor(f[,"area"],f[,"rain"])
+cor(f[,"area"],f[,"RH"])
+cor(f[,"area"],f[,"wind"])
+```
+None of these values are significant : we can't conclude to any correlation between the area burned and other variables.
